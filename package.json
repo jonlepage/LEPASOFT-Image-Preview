@@ -88,6 +88,12 @@
           "description": "A flag which indicates whether resources should be resolved from references",
           "type": "boolean"
         },
+        "gutterpreview.enableDocCommentImagePreview": {
+          "default": true,
+          "scope": "resource",
+          "description": "Show image previews from doc comments (///, /**, etc.) when hovering over a symbol whose definition contains image data URIs in its comments",
+          "type": "boolean"
+        },
         "gutterpreview.urlDetectionPatterns": {
           "default": [],
           "scope": "resource",
