@@ -83,7 +83,7 @@
           "type": "string"
         },
         "gutterpreview.enableReferenceLookup": {
-          "default": true,
+          "default": false,
           "scope": "resource",
           "description": "Resolve image previews from symbol references: when hovering a symbol, look up its definition and scan doc comments above it for image URIs (data:image, file paths, etc.)",
           "type": "boolean"
