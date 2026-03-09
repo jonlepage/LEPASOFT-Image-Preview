@@ -231,7 +231,9 @@ export function activate(context: ExtensionContext) {
                                     }
                                 }
                             });
-                            return Promise.all(pendingRequests.filter((r) => !!r)).then((responses) => {
+                            return Promise
+                            .all(pendingRequests.filter((r) => !!r))
+                            .then((responses) => {
                                 return {
                                     images: responses
                                         .map((response) => response.images)
@@ -245,7 +247,8 @@ export function activate(context: ExtensionContext) {
         }
 
         requests.push(getImageInfo(document.uri, visibleLines));
-        return Promise.all(requests)
+        return Promise
+            .all(requests)
             .then((responses) => {
                 return {
                     images: responses

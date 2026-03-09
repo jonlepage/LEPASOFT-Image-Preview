@@ -83,15 +83,9 @@
           "type": "string"
         },
         "gutterpreview.enableReferenceLookup": {
-          "default": false,
-          "scope": "resource",
-          "description": "A flag which indicates whether resources should be resolved from references",
-          "type": "boolean"
-        },
-        "gutterpreview.enableDocCommentImagePreview": {
           "default": true,
           "scope": "resource",
-          "description": "Show image previews from doc comments (///, /**, etc.) when hovering over a symbol whose definition contains image data URIs in its comments",
+          "description": "Resolve image previews from symbol references: when hovering a symbol, look up its definition and scan doc comments above it for image URIs (data:image, file paths, etc.)",
           "type": "boolean"
         },
         "gutterpreview.urlDetectionPatterns": {
