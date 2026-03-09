@@ -166,7 +166,7 @@ export function activate(context: ExtensionContext) {
         const requests: Array<Thenable<ImageInfoResponse>> = [];
         const isReferenceLookupEnabled = getConfiguredProperty(document, 'enableReferenceLookup', false);
         if (isReferenceLookupEnabled) {
-            const propertyAccessRegex = /(\.[a-zA-Z_$0-9]+)|(\$[a-zA-Z_$0-9]+)/g;
+            const propertyAccessRegex = /(\.[a-zA-Z_$0-9]+)|(\$[a-zA-Z_$0-9]+)|(\b[A-Z][a-zA-Z_$0-9]*\b)/g;
             for (const lineIndex of visibleLines) {
                 var line = document.lineAt(lineIndex).text;
                 if (!line) continue;
@@ -177,9 +177,11 @@ export function activate(context: ExtensionContext) {
 
                 let matches;
                 while ((matches = propertyAccessRegex.exec(line)) != null) {
+                    // Group 1 (.foo) and Group 2 ($foo) have a prefix char; Group 3 (PascalCase) does not
+                    const offset = matches[3] ? 1 : 2;
                     const position = new Position(
                         lineIndex,
-                        matches.index + 1 /* DOT or $ sign */ + 1 /* to be inside the word */,
+                        matches.index + offset,
                     );
                     const range = document.getWordRangeAtPosition(position);
                     if (!range) continue;
@@ -193,10 +195,35 @@ export function activate(context: ExtensionContext) {
                                     const uri = (definition as Location).uri || (definition as LocationLink).targetUri;
                                     const definitionRange =
                                         (definition as Location).range || (definition as LocationLink).targetRange;
-                                    if (definitionRange && definitionRange.isSingleLine) {
-                                        return workspace.openTextDocument(uri).then(() => {
+                                    if (definitionRange) {
+                                        // Skip if the definition is in the same file
+                                        // (the normal scan already handles data URIs in the current document)
+                                        if (uri.toString() === document.uri.toString()) return;
+
+                                        return workspace.openTextDocument(uri).then((defDoc) => {
                                             if (token.isCancellationRequested) return Promise.reject();
-                                            return getImageInfo(uri, [definitionRange.start.line]).then((response) => {
+
+                                            // Scan upward from the definition line, collecting comment lines
+                                            // Stop when we hit a non-comment, non-blank line
+                                            const defLine = definitionRange.start.line;
+                                            const linesToScan: number[] = [defLine];
+                                            for (let i = defLine - 1; i >= 0 && i >= defLine - 20; i--) {
+                                                const lineText = defDoc.lineAt(i).text.trim();
+                                                if (
+                                                    lineText.startsWith('///') ||
+                                                    lineText.startsWith('//') ||
+                                                    lineText.startsWith('*') ||
+                                                    lineText.startsWith('/**') ||
+                                                    lineText.startsWith('*/') ||
+                                                    lineText === ''
+                                                ) {
+                                                    linesToScan.push(i);
+                                                } else {
+                                                    break;
+                                                }
+                                            }
+
+                                            return getImageInfo(uri, linesToScan).then((response) => {
                                                 response.images.forEach((p) => (p.range = range));
                                                 return response;
                                             });
