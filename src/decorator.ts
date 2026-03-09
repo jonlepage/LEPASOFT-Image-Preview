@@ -105,34 +105,47 @@ export function imageDecorator(
 
             if (major > 1 || (major == 1 && minor > 7)) {
                 const documentDecorators = getDocumentDecorators(document);
-                const matchingDecoratorAndItem = documentDecorators.decorations
+                const seenImagePaths = new Set<string>();
+                const allMatchingPairs = documentDecorators.decorations
                     .map((item) => {
                         return {
                             item: item,
                             decoration: item.decorations.find((dec) => dec.range.contains(position)),
                         };
                     })
-                    .find((pair) => pair.decoration != null);
+                    .filter((pair) => {
+                        if (pair.decoration == null) return false;
+                        if (seenImagePaths.has(pair.item.imagePath)) return false;
+                        seenImagePaths.add(pair.item.imagePath);
+                        return true;
+                    });
 
-                if (matchingDecoratorAndItem && matchingDecoratorAndItem.decoration) {
-                    const item = matchingDecoratorAndItem.item;
+                if (allMatchingPairs.length > 0) {
+                    let maxSizeConfig = '';
+                    if (maxWidth > 0) {
+                        maxSizeConfig = `|width=${maxWidth}`;
+                    } else if (maxHeight > 0) {
+                        maxSizeConfig = `|height=${maxHeight}`;
+                    }
 
-                    let formatPreview = (
-                        imagePath: string,
+                    const hoverRange = allMatchingPairs[0].decoration.range;
+
+                    const formatSinglePreview = (
+                        item: Decoration,
                         options?: {
-                            hasOpenFileCommand?: boolean;
                             dimensions?: { height: number; width: number };
                             size?: string;
                         },
-                    ) => {
-                        const { hasOpenFileCommand = true, dimensions, size } = options || {};
-                        let result = '';
+                    ): string => {
+                        const { dimensions, size } = options || {};
+                        let imagePath = item.imagePath;
+                        let text = '';
 
                         if (isLocalFile(imagePath) && !isUrlEncodedFile(imagePath)) {
                             imagePath = vscode.Uri.file(imagePath).toString();
                         }
 
-                        if (hasOpenFileCommand && isLocalFile(item.originalImagePath)) {
+                        if (isLocalFile(item.originalImagePath) && !isUrlEncodedFile(item.originalImagePath)) {
                             const uri = vscode.Uri.file(item.originalImagePath);
                             const args = [uri];
                             const openFileCommandUrl = vscode.Uri.parse(
@@ -141,52 +154,50 @@ export function imageDecorator(
                             const browseFileCommandUrl = vscode.Uri.parse(
                                 `command:revealFileInOS?${encodeURIComponent(JSON.stringify(args))}`,
                             );
-                            result += `  \r\n[Reveal in Side Bar](${openFileCommandUrl} "Reveal in Side Bar")`;
-                            result += `  \r\n`;
-                            result += `  \r\n[Open Containing Folder](${browseFileCommandUrl} "Open Containing Folder")`;
+                            text += `  \r\n[Reveal in Side Bar](${openFileCommandUrl} "Reveal in Side Bar")`;
+                            text += `  \r\n`;
+                            text += `  \r\n[Open Containing Folder](${browseFileCommandUrl} "Open Containing Folder")`;
                         }
 
                         if (dimensions?.height && dimensions?.width) {
-                            result += `  \r\n${dimensions.width}x${dimensions.height}`;
+                            text += `  \r\n${dimensions.width}x${dimensions.height}`;
                         }
 
                         if (size) {
-                            result += `  \r\n${size}`;
+                            text += `  \r\n${size}`;
                         }
 
-                        if (result.length > 0) {
-                            result += `\r\n\r\n`;
+                        if (text.length > 0) {
+                            text += `\r\n\r\n`;
                         }
 
-                        let maxSizeConfig = '';
-                        if (maxWidth > 0) {
-                            maxSizeConfig = `|width=${maxWidth}`;
-                        } else if (maxHeight > 0) {
-                            maxSizeConfig = `|height=${maxHeight}`;
-                        }
-                        result += `![${imagePath}](${imagePath}${maxSizeConfig})`;
-
-                        const contents = new vscode.MarkdownString(result);
-                        contents.isTrusted = true;
-
-                        return new vscode.Hover(contents, matchingDecoratorAndItem.decoration.range);
+                        text += `![${imagePath}](${imagePath}${maxSizeConfig})`;
+                        return text;
                     };
 
-                    try {
-                        if (isUrlEncodedFile(item.originalImagePath)) {
-                            result = Promise.resolve(formatPreview(item.imagePath, { hasOpenFileCommand: false }));
-                        } else {
-                            const dimensionsOfPromise = util.promisify(imageSize)(item.imagePath);
-                            const sizeOfPromise = getFilesize(item.imagePath);
-
-                            result = Promise.all([dimensionsOfPromise, sizeOfPromise]).then(
-                                ([dimentions, size]) => formatPreview(item.imagePath, { dimensions: dimentions, size }),
-                                () => formatPreview(item.imagePath),
-                            );
+                    const previewPromises = allMatchingPairs.map(({ item }) => {
+                        try {
+                            if (isUrlEncodedFile(item.originalImagePath)) {
+                                return Promise.resolve(formatSinglePreview(item));
+                            } else {
+                                const dimensionsOfPromise = util.promisify(imageSize)(item.imagePath);
+                                const sizeOfPromise = getFilesize(item.imagePath);
+                                return Promise.all([dimensionsOfPromise, sizeOfPromise]).then(
+                                    ([dimensions, size]) => formatSinglePreview(item, { dimensions, size }),
+                                    () => formatSinglePreview(item),
+                                );
+                            }
+                        } catch (error) {
+                            return Promise.resolve(formatSinglePreview(item));
                         }
-                    } catch (error) {
-                        result = Promise.resolve(formatPreview(item.imagePath));
-                    }
+                    });
+
+                    result = Promise.all(previewPromises).then((previews) => {
+                        const combined = previews.join('\r\n\r\n---\r\n\r\n');
+                        const contents = new vscode.MarkdownString(combined);
+                        contents.isTrusted = true;
+                        return new vscode.Hover(contents, hoverRange);
+                    });
                 }
             }
 
