@@ -1,10 +1,10 @@
 {
   "name": "lepasoft-image-preview",
-  "description": "Shows image preview in the gutter, on hover, and from doc comments. Fork of Image Preview by Tamas Kiss.",
+  "description": "Display image previews from doc comments directly in symbol hover panels. Supports multiple images, base64, and multiple languages. Ideal for i18n dictionaries and game development.",
   "author": "LEPASOFT-DEV",
   "publisher": "lepasoft-dev",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "LEPASOFT Image Preview",
   "icon": "images/logo.png",
   "engines": {

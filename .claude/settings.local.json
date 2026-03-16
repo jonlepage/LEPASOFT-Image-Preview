@@ -4,7 +4,8 @@
       "Bash(npm run:*)",
       "Bash(xargs grep:*)",
       "Bash(npx @vscode/vsce ls)",
-      "Bash(npx @vscode/vsce package)"
+      "Bash(npx @vscode/vsce package)",
+      "Bash(npx @vscode/vsce publish)"
     ]
   }
 }
