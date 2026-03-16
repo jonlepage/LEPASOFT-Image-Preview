@@ -1,4 +1,3 @@
-import { URI } from 'vscode-uri';
 import * as tmp from 'tmp';
 import fetch from 'node-fetch';
 import * as path from 'path';
@@ -42,17 +41,18 @@ export const ImageCache = {
             return ImageCache.get(absoluteImagePath);
         } else {
             try {
-                const absoluteImageUrl = URI.parse(absoluteImagePath);
+                const cleanPath = absoluteImagePath.split('?')[0].split('#')[0];
+                const ext = path.parse(cleanPath).ext || '.png';
                 if (!fs.existsSync(storagePath)) {
                     fs.mkdirSync(storagePath);
                 }
                 const tempFile = tmp.fileSync({
                     tmpdir: storagePath,
-                    postfix: absoluteImageUrl.path ? path.parse(absoluteImageUrl.path).ext : '.png',
+                    postfix: ext,
                 });
                 const filePath = tempFile.name;
                 const promise = new Promise<string>((resolve, reject) => {
-                    if (absoluteImageUrl.scheme && absoluteImageUrl.scheme.startsWith('http')) {
+                    if (absoluteImagePath.startsWith('http://') || absoluteImagePath.startsWith('https://')) {
                         fetch(new url.URL(absoluteImagePath).toString(), {
                             size: 20 * 1024 * 1024, // 20 MB
                         })

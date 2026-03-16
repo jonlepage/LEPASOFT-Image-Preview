@@ -23,7 +23,6 @@ import { nonNullOrEmpty, nonHttpOnly } from '../util/stringutil';
 
 import { ImageCache } from '../util/imagecache';
 import { UrlMatch } from '../recognizers/recognizer';
-import { URI } from 'vscode-uri';
 import { replaceCurrentColorInDataURI } from '../util/currentColorHelper';
 
 let connection: Connection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
@@ -183,11 +182,10 @@ async function convertToLocalImagePath(
         let isPatternSupported: boolean;
 
         if (!isDataUri) {
-            const absoluteImageUrl = URI.parse(absoluteImagePath);
-            if (absoluteImageUrl && absoluteImageUrl.path) {
-                let absolutePath = path.parse(absoluteImageUrl.path);
+            let absolutePath = path.parse(absoluteImagePath);
+            if (absolutePath && absolutePath.ext) {
                 isExtensionSupported = acceptedExtensions.some(
-                    (ext) => absolutePath && absolutePath.ext && absolutePath.ext.toLowerCase().startsWith(ext),
+                    (ext) => absolutePath.ext.toLowerCase().startsWith(ext),
                 );
                 if (!isExtensionSupported && urlDetectionPatterns.length) {
                     isPatternSupported = urlDetectionPatterns.some((regex) => regex.test(absoluteImagePath));
