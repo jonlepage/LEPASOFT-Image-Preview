@@ -1,19 +1,18 @@
 {
-  "name": "vscode-gutter-preview",
-  "private": true,
-  "description": "Shows image preview in the gutter and on hover",
-  "author": "Tamas Kiss",
-  "publisher": "kisstkondoros",
+  "name": "lepasoft-image-preview",
+  "description": "Shows image preview in the gutter, on hover, and from doc comments. Fork of Image Preview by Tamas Kiss.",
+  "author": "LEPASOFT-DEV",
+  "publisher": "lepasoft-dev",
   "license": "MIT",
-  "version": "0.32.2",
-  "displayName": "Image preview",
+  "version": "1.0.0",
+  "displayName": "LEPASOFT Image Preview",
   "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.88.1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/kisstkondoros/gutter-preview.git"
+    "url": "https://github.com/jonlepage/gutter-preview.git"
   },
   "keywords": [
     "vscode",

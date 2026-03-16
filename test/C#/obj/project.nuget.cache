@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "FRxbP2vDvjM=",
+  "success": true,
+  "projectFilePath": "D:\\Users\\jonle\\Documents\\DEV\\fork\\gutter-preview\\test\\C#\\TestProject.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\jonle\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.25\\microsoft.netcore.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\jonle\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.25\\microsoft.windowsdesktop.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\jonle\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.25\\microsoft.aspnetcore.app.ref.8.0.25.nupkg.sha512"
+  ],
+  "logs": []
+}
