@@ -22,12 +22,17 @@ import {
     Location,
     LocationLink,
     OutputChannel,
+    Range,
 } from 'vscode';
-import { ImageInfoResponse, GutterPreviewImageRequestType } from './common/protocol';
+import { ImageInfoResponse, GutterPreviewImageRequestType, ImageInfo } from './common/protocol';
 import { imageDecorator } from './decorator';
 import { getConfiguredProperty } from './util/configuration';
 
 const pathCache = {};
+
+// Cache for reference lookup: "word@definitionUri:line" → deep-cloned images
+const REFERENCE_CACHE_MAX_SIZE = 500;
+const referenceImageCache = new Map<string, ImageInfo[]>();
 
 const loadPathsFromTSConfig = (
     workspaceFolder: string,
@@ -75,7 +80,7 @@ const loadPathsFromTSConfig = (
 export function activate(context: ExtensionContext) {
     const storageUri = context.storageUri || context.globalStorageUri;
     if (!storageUri || !storageUri.fsPath) {
-        throw new Error('The extension "vscode-gutter-preview" can not work without access to the storage!');
+        throw new Error('The extension "LEPASOFT Image Preview" can not work without access to the storage!');
     }
 
     let serverModule = context.asAbsolutePath(path.join('dist', 'server.js'));
@@ -96,14 +101,14 @@ export function activate(context: ExtensionContext) {
         errorHandler: {
             error: (error: Error, message: Message | undefined, count: number | undefined) => {
                 if (!output) {
-                    output = window.createOutputChannel('gutter-preview');
+                    output = window.createOutputChannel('LEPASOFT Image Preview');
                 }
                 output.appendLine(message.jsonrpc);
                 return {
                     handled: true,
                     action: ErrorAction.Continue,
                     message:
-                        'An error occured while processing a request for the gutter-preview extension. Check the output "gutter-preview" for further details.',
+                        'An error occured while processing a request for LEPASOFT Image Preview. Check the output "LEPASOFT Image Preview" for further details.',
                 };
             },
 
@@ -163,14 +168,20 @@ export function activate(context: ExtensionContext) {
             });
         };
 
+        const emptyResponse: ImageInfoResponse = { images: [] };
         const requests: Array<Thenable<ImageInfoResponse>> = [];
         const isReferenceLookupEnabled = getConfiguredProperty(document, 'enableReferenceLookup', false);
         if (isReferenceLookupEnabled) {
+            // Fix #4: Deduplicate — only look up each unique word once
+            const seenWords = new Set<string>();
+            const wordRanges = new Map<string, Range>();
+
             const propertyAccessRegex = /(\.[a-zA-Z_$0-9]+)|(\$[a-zA-Z_$0-9]+)|(\b[A-Z][a-zA-Z_$0-9]*\b)/g;
             for (const lineIndex of visibleLines) {
                 var line = document.lineAt(lineIndex).text;
                 if (!line) continue;
-                if (token.isCancellationRequested) return Promise.reject();
+                // Fix #3: return empty instead of Promise.reject()
+                if (token.isCancellationRequested) return Promise.resolve(emptyResponse);
                 if (line.length > 20000) {
                     continue;
                 }
@@ -186,10 +197,18 @@ export function activate(context: ExtensionContext) {
                     const range = document.getWordRangeAtPosition(position);
                     if (!range) continue;
 
+                    const word = document.getText(range);
+                    // Skip if we've already queued a lookup for this word
+                    if (seenWords.has(word)) continue;
+                    seenWords.add(word);
+                    wordRanges.set(word, range);
+
                     const pendingDefinitionRequest = commands
                         .executeCommand('vscode.executeDefinitionProvider', document.uri, position)
                         .then((definitions: (Location | LocationLink)[]) => {
-                            if (token.isCancellationRequested) return Promise.reject();
+                            if (token.isCancellationRequested || !definitions || !Array.isArray(definitions)) {
+                                return emptyResponse;
+                            }
                             const pendingRequests = definitions.map((definition) => {
                                 if (definition) {
                                     const uri = (definition as Location).uri || (definition as LocationLink).targetUri;
@@ -200,8 +219,19 @@ export function activate(context: ExtensionContext) {
                                         // (the normal scan already handles data URIs in the current document)
                                         if (uri.toString() === document.uri.toString()) return;
 
+                                        const cacheKey = `${word}@${uri.toString()}:${definitionRange.start.line}`;
+                                        const cached = referenceImageCache.get(cacheKey);
+                                        if (cached) {
+                                            // Fix #2: cached images are already cloned, just set new range
+                                            return Promise.resolve({
+                                                images: cached.map((img) => ({ ...img, range: range })),
+                                            } as ImageInfoResponse);
+                                        }
+
                                         return workspace.openTextDocument(uri).then((defDoc) => {
-                                            if (token.isCancellationRequested) return Promise.reject();
+                                            if (token.isCancellationRequested) {
+                                                return emptyResponse;
+                                            }
 
                                             // Scan upward from the definition line, collecting comment lines
                                             // Stop when we hit a non-comment, non-blank line
@@ -224,10 +254,23 @@ export function activate(context: ExtensionContext) {
                                             }
 
                                             return getImageInfo(uri, linesToScan).then((response) => {
+                                                // Fix #2: deep clone images before caching (before mutation)
+                                                referenceImageCache.set(
+                                                    cacheKey,
+                                                    response.images.map((img) => ({ ...img })),
+                                                );
+
+                                                // Fix #5: evict oldest entries if cache exceeds max size
+                                                if (referenceImageCache.size > REFERENCE_CACHE_MAX_SIZE) {
+                                                    const firstKey = referenceImageCache.keys().next().value;
+                                                    referenceImageCache.delete(firstKey);
+                                                }
+
+                                                // Mutate range for current caller
                                                 response.images.forEach((p) => (p.range = range));
                                                 return response;
                                             });
-                                        });
+                                        }).then(undefined, () => emptyResponse);
                                     }
                                 }
                             });
@@ -236,13 +279,55 @@ export function activate(context: ExtensionContext) {
                             .then((responses) => {
                                 return {
                                     images: responses
+                                        .filter((r) => r && r.images)
                                         .map((response) => response.images)
                                         .reduce((prev, curr) => prev.concat(...curr), []),
                                 } as ImageInfoResponse;
                             });
-                        });
+                        }).then(undefined, () => emptyResponse);
                     requests.push(pendingDefinitionRequest);
                 }
+            }
+
+            // Map deduplicated results back to ALL occurrences of each word
+            if (requests.length > 0) {
+                const deduplicatedRequest = Promise.all(requests).then((responses) => {
+                    const imagesByWord = new Map<string, ImageInfoResponse>();
+                    const allWords = Array.from(seenWords);
+
+                    // Collect images from each deduplicated lookup
+                    responses.forEach((response, index) => {
+                        if (response && response.images.length > 0) {
+                            imagesByWord.set(allWords[index], response);
+                        }
+                    });
+
+                    // Now find ALL occurrences of words that have images and create decorations
+                    const allImages: ImageInfo[] = [];
+                    imagesByWord.forEach((response, word) => {
+                        // Find all positions of this word in visible lines
+                        for (const lineIndex of visibleLines) {
+                            const lineText = document.lineAt(lineIndex).text;
+                            let searchIndex = 0;
+                            while (true) {
+                                const idx = lineText.indexOf(word, searchIndex);
+                                if (idx === -1) break;
+                                const pos = new Position(lineIndex, idx);
+                                const wordRange = document.getWordRangeAtPosition(pos);
+                                if (wordRange && document.getText(wordRange) === word) {
+                                    response.images.forEach((img) => {
+                                        allImages.push({ ...img, range: wordRange });
+                                    });
+                                }
+                                searchIndex = idx + word.length;
+                            }
+                        }
+                    });
+                    return { images: allImages } as ImageInfoResponse;
+                });
+                // Replace individual requests with one combined request
+                requests.length = 0;
+                requests.push(deduplicatedRequest);
             }
         }
 
@@ -266,6 +351,22 @@ export function activate(context: ExtensionContext) {
                 };
             });
     };
+
+    // Invalidate reference image cache when any document changes
+    context.subscriptions.push(
+        workspace.onDidChangeTextDocument((e) => {
+            if (e && e.document) {
+                const changedUri = e.document.uri.toString();
+                const keysToDelete: string[] = [];
+                referenceImageCache.forEach((_, key) => {
+                    if (key.includes(changedUri)) {
+                        keysToDelete.push(key);
+                    }
+                });
+                keysToDelete.forEach((key) => referenceImageCache.delete(key));
+            }
+        }),
+    );
 
     imageDecorator(symbolUpdater, context, client);
 }

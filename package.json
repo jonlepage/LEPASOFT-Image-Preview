@@ -12,7 +12,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jonlepage/gutter-preview.git"
+    "url": "https://github.com/jonlepage/LEPASOFT-Image-Preview.git"
+  },
+  "homepage": "https://github.com/jonlepage/LEPASOFT-Image-Preview",
+  "bugs": {
+    "url": "https://github.com/jonlepage/LEPASOFT-Image-Preview/issues"
   },
   "keywords": [
     "vscode",
@@ -82,7 +86,7 @@
           "type": "string"
         },
         "gutterpreview.enableReferenceLookup": {
-          "default": false,
+          "default": true,
           "scope": "resource",
           "description": "Resolve image previews from symbol references: when hovering a symbol, look up its definition and scan doc comments above it for image URIs (data:image, file paths, etc.)",
           "type": "boolean"

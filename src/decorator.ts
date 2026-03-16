@@ -34,7 +34,7 @@ export function imageDecorator(
     let scanResults: { [uri: string]: ScanResult } = {};
 
     let throttleIds = {};
-    let throttledScan = (document: vscode.TextDocument, timeout: number = 500) => {
+    let throttledScan = (document: vscode.TextDocument, timeout: number = 1000) => {
         if (document && document.uri) {
             const lookupKey = document.uri.toString();
             if (throttleIds[lookupKey]) clearTimeout(throttleIds[lookupKey]);
@@ -240,6 +240,9 @@ export function imageDecorator(
 
             decoratorProvider(document, visibleLines, scanResult.token.token)
                 .then((symbolResponse) => {
+                    if (!symbolResponse || !symbolResponse.images) {
+                        return;
+                    }
                     const scanResult = getDocumentDecorators(document);
                     clearEditorDecorations(
                         document,
@@ -253,8 +256,8 @@ export function imageDecorator(
                         );
                     });
                 })
-                .catch((e) => {
-                    console.error(e);
+                .catch(() => {
+                    // Keep existing decorations on error
                 });
         }
     };
@@ -284,7 +287,7 @@ export function imageDecorator(
         vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
             if (event && event.textEditor && event.textEditor.document) {
                 const document = event.textEditor.document;
-                throttledScan(document, 50);
+                throttledScan(document, 100);
             }
         }),
     );
