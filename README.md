@@ -4,8 +4,6 @@ Display image previews from documentation comments directly in symbol hover pane
 
 Ideal for game developers and software engineers maintaining i18n key dictionaries or any reference system where previewing the visual context of defined keys improves workflow.
 
-Fork of [Image Preview](https://marketplace.visualstudio.com/items?itemName=kisstkondoros.vscode-gutter-preview) by Tamas Kiss.
-
 ## Features
 
 ### Gutter preview
@@ -34,18 +32,18 @@ Search for **LEPASOFT Image Preview** in the VS Code Extensions panel, or instal
 
 ## Configuration
 
-| Setting | Default | Description |
-| --- | --- | --- |
-| `gutterpreview.showImagePreviewOnGutter` | `true` | Show image preview in the gutter |
-| `gutterpreview.imagePreviewMaxHeight` | `100` | Max height of the image preview on hover (px) |
-| `gutterpreview.imagePreviewMaxWidth` | `-1` | Max width of the image preview on hover (px), overrides max height if > 0 |
-| `gutterpreview.enableReferenceLookup` | `true` | Resolve image previews from symbol references and doc comments |
-| `gutterpreview.sourceFolder` | `"src"` | Additional folder for relative URL resolution |
-| `gutterpreview.sourceFolders` | `["static", "public"]` | Additional folders for relative URL resolution |
-| `gutterpreview.paths` | `{}` | Path mappings computed relative to project root |
-| `gutterpreview.currentColorForSVG` | `"white"` | Default color used in SVG previews |
-| `gutterpreview.showUnderline` | `true` | Show underline on detected image links |
-| `gutterpreview.urlDetectionPatterns` | `[]` | Custom regex patterns to detect image URLs without standard extensions |
+| Setting                                  | Default                | Description                                                               |
+| ---------------------------------------- | ---------------------- | ------------------------------------------------------------------------- |
+| `gutterpreview.showImagePreviewOnGutter` | `true`                 | Show image preview in the gutter                                          |
+| `gutterpreview.imagePreviewMaxHeight`    | `100`                  | Max height of the image preview on hover (px)                             |
+| `gutterpreview.imagePreviewMaxWidth`     | `-1`                   | Max width of the image preview on hover (px), overrides max height if > 0 |
+| `gutterpreview.enableReferenceLookup`    | `true`                 | Resolve image previews from symbol references and doc comments            |
+| `gutterpreview.sourceFolder`             | `"src"`                | Additional folder for relative URL resolution                             |
+| `gutterpreview.sourceFolders`            | `["static", "public"]` | Additional folders for relative URL resolution                            |
+| `gutterpreview.paths`                    | `{}`                   | Path mappings computed relative to project root                           |
+| `gutterpreview.currentColorForSVG`       | `"white"`              | Default color used in SVG previews                                        |
+| `gutterpreview.showUnderline`            | `true`                 | Show underline on detected image links                                    |
+| `gutterpreview.urlDetectionPatterns`     | `[]`                   | Custom regex patterns to detect image URLs without standard extensions    |
 
 ## Credits
 
