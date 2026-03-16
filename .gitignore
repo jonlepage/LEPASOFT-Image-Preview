@@ -5,3 +5,5 @@ npm-debug.log
 .vscode-test
 testfiles
 *.vsix
+.claude/
+test/C#/obj/
