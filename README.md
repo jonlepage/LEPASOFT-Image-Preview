@@ -16,9 +16,11 @@ Hover over an image reference to see a full preview with dimensions and file siz
 
 ![Hover preview](https://raw.githubusercontent.com/jonlepage/LEPASOFT-Image-Preview/master/images/screenshot-hover.jpg)
 
-### Doc comment image preview (new)
+### Doc comment image preview for all languages
 
-Hover over a symbol reference to see images embedded in its documentation comments (`/// <image url="...">`, `@image`, data URIs, etc.). Works with C#, TypeScript, and any language supported by VS Code's definition provider.
+References containing images are identified with a gutter icon. Hover to view the visual reference directly in the editor. Supports C#, TypeScript, GDScript, and any language supported by VS Code's definition provider.
+
+Multiple images can be referenced in doc comments to guide developers through dictionary keys. Image preview reduces ambiguity when working with large, complex dictionaries used in game engines or software localization.
 
 ![Doc comment preview](https://raw.githubusercontent.com/jonlepage/LEPASOFT-Image-Preview/master/images/screenshot-doccomment.jpg)
 
